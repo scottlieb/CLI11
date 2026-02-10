@@ -22,6 +22,7 @@
 // [CLI11:public_includes:end]
 
 // CLI Library includes
+#include "Completions.hpp"
 #include "ConfigFwd.hpp"
 #include "Error.hpp"
 #include "FormatterFwd.hpp"
@@ -163,6 +164,10 @@ class App {
     Option *version_ptr_{nullptr};
 
     Option *autocomplete_ptr_{nullptr};
+
+    App *completion_cmd_ptr_{nullptr};
+
+    std::string completion_shell_type_{""};
 
     /// This is the formatter for help printing. Default provided. INHERITABLE (same pointer)
     std::shared_ptr<FormatterBase> formatter_{new Formatter()};
@@ -330,6 +335,7 @@ class App {
         : App(app_description, app_name, nullptr) {
         set_help_flag("-h,--help", "Print this help message and exit");
         set_autocomplete_flag("--_autocomplete", "Autocomplete");
+        set_completion_command("completion", "Generate autocomplete scripts for a given shell");
     }
 
     App(const App &) = delete;
@@ -806,6 +812,27 @@ class App {
         return autocomplete_ptr_;
     }
 
+    App *set_completion_command(std::string name = "", const std::string &description = "") {
+        if(completion_cmd_ptr_ != nullptr) {
+            remove_subcommand(completion_cmd_ptr_);
+            completion_cmd_ptr_ = nullptr;
+        }
+
+        // Empty name will simply remove the flag
+        if(!name.empty()) {
+            completion_cmd_ptr_ = add_subcommand(name, description);
+            completion_cmd_ptr_->configurable(false);
+            completion_cmd_ptr_->add_option("shell-type", completion_shell_type_)
+                ->required()
+                ->transform(IsMember(supported_completion_shells))
+                ->description("Generate completion scripts for a given shell type");
+            // Hide the command
+            completion_cmd_ptr_->group("");
+        }
+
+        return completion_cmd_ptr_;
+    }
+
   private:
     /// Internal function for adding a flag
     Option *_add_flag_internal(std::string flag_name, CLI::callback_t fun, std::string flag_description) {
@@ -1095,6 +1122,9 @@ class App {
             sub->remove_excludes(subcom);
             sub->remove_needs(subcom);
         }
+
+        if (completion_cmd_ptr_ == subcom)
+            completion_cmd_ptr_ = nullptr;
 
         auto iterator = std::find_if(
             std::begin(subcommands_), std::end(subcommands_), [subcom](const App_p &v) { return v.get() == subcom; });
@@ -1422,6 +1452,11 @@ class App {
 
         if(e.get_name() == "AutocompleteMsg") {
             out << e.what();
+            return e.get_exit_code();
+        }
+
+        if(e.get_name() == "CompletionScriptMessage") {
+            out << e.what() << std::endl;
             return e.get_exit_code();
         }
 
@@ -1829,6 +1864,9 @@ class App {
 
     /// Get a pointer to the auto-complete flag.
     const Option *get_autocomplete_ptr() const { return autocomplete_ptr_; }
+
+    /// Get a pointer to the completion command.
+    App *get_completion_cmd_ptr() const { return completion_cmd_ptr_; }
 
     /// Get a pointer to the config option.
     Option *get_config_ptr() { return config_ptr_; }
@@ -2254,6 +2292,21 @@ class App {
         }
     }
 
+    void _process_completion_command() const {
+        App *completion_cmd_ptr = get_completion_cmd_ptr();
+
+        if(completion_cmd_ptr == nullptr)
+            return;
+
+        if (!completion_cmd_ptr->parsed())
+            return;
+
+        completion_cmd_ptr->_process_requirements();
+
+        auto completion_script = generate_completion_script(completion_shell_type_, name_);
+        throw CompletionScriptMessage(completion_script);
+    }
+
     /// Verify required options and cross requirements. Subcommands too (only if selected).
     void _process_requirements() {
         // check excludes
@@ -2404,6 +2457,7 @@ class App {
         _process_autocomplete_flag();
         _process_callbacks();
         _process_help_flags();
+        _process_completion_command();
 
         _process_requirements();
     }

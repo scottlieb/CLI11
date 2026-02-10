@@ -181,8 +181,14 @@ class CallForVersion : public Success {
 
 class AutocompleteMsg : public ParseError {
     CLI11_ERROR_DEF(ParseError, AutocompleteMsg)
-    AutocompleteMsg(const std::vector<std::string> &completions) :
+    explicit AutocompleteMsg(const std::vector<std::string> &completions) :
         AutocompleteMsg(detail::join(completions, "\n"), ExitCodes::Success) {}
+};
+
+class CompletionScriptMessage : public Success {
+    CLI11_ERROR_DEF(Success, CompletionScriptMessage)
+    explicit CompletionScriptMessage(const std::string &script) :
+        CompletionScriptMessage(script, ExitCodes::Success) {}
 };
 
 /// Does not output a diagnostic in CLI11_PARSE, but allows main() to return with a specific error code.

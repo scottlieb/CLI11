@@ -795,7 +795,6 @@ class App {
     }
 
     Option *set_autocomplete_flag(std::string name = "", const std::string &description = "") {
-        // TODO: redundant code? copy pasted from set_help_flag()
         if(autocomplete_ptr_ != nullptr) {
             remove_option(autocomplete_ptr_);
             autocomplete_ptr_ = nullptr;
@@ -812,13 +811,13 @@ class App {
         return autocomplete_ptr_;
     }
 
-    App *set_completion_command(std::string name = "", const std::string &description = "") {
+    App *set_completion_command(const std::string &name = "", const std::string &description = "") {
         if(completion_cmd_ptr_ != nullptr) {
             remove_subcommand(completion_cmd_ptr_);
             completion_cmd_ptr_ = nullptr;
         }
 
-        // Empty name will simply remove the flag
+        // Empty name will simply remove the command
         if(!name.empty()) {
             completion_cmd_ptr_ = add_subcommand(name, description);
             completion_cmd_ptr_->configurable(false);

@@ -274,22 +274,6 @@ if(CLI11_SINGLE_FILE)
                            $<INSTALL_INTERFACE:include>)
 endif()
 
-set(CLI11_COMPLETION_BASH_FILE ${CMAKE_CURRENT_SOURCE_DIR}/completion.bash.in CACHE INTERNAL "")
-function(cli11_install_completion_file CLI11_EXE_NAME)
-  # TODO: move find_package outside?
-  find_package(bash-completion QUIET)
-  if(BASH_COMPLETION_FOUND)
-    # Fix BASH_COMPLETION_COMPLETIONSDIR with CMAKE_INSTALL_PREFIX
-    if(NOT CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
-      set(BASH_COMPLETION_COMPLETIONSDIR ${CMAKE_INSTALL_PREFIX}/${BASH_COMPLETION_COMPLETIONSDIR})
-    endif()
-
-    set(CLI11_TARGET_COMPLETION_BASH_FILE ${CMAKE_CURRENT_BINARY_DIR}/_cli11_bash_completion/${CLI11_EXE_NAME})
-    configure_file(${CLI11_COMPLETION_BASH_FILE} ${CLI11_TARGET_COMPLETION_BASH_FILE} @ONLY)
-    install(FILES "${CLI11_TARGET_COMPLETION_BASH_FILE}" DESTINATION "${BASH_COMPLETION_COMPLETIONSDIR}/")
-  endif()
-endfunction()
-
 if(CLI11_BUILD_TESTS)
   include(CTest)
   add_subdirectory(tests)
